@@ -22,6 +22,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.StrictMode;
 import android.os.SystemClock;
+import android.util.Log;
 import android.widget.MediaController.MediaPlayerControl;
 import java.io.File;
 import java.io.FileDescriptor;
@@ -80,6 +81,13 @@ public class GifDrawable extends Drawable implements Animatable, MediaPlayerCont
 	private int mScaledWidth;
 	private int mScaledHeight;
 	private Transform mTransform;
+
+	private long startTime, prevTime; // Used to track elapsed time for animations and fps
+	private int frames = 0;     // Used to track frames per second
+	private float fps = 0;      // frames per second
+	private String fpsString;
+	private Paint fpsPaint;
+
 
 	/**
 	 * Creates drawable from resource.
@@ -254,6 +262,10 @@ public class GifDrawable extends Drawable implements Animatable, MediaPlayerCont
 		mRenderTask.doWork();
 		mScaledWidth = mNativeInfoHandle.getWidth();
 		mScaledHeight = mNativeInfoHandle.getHeight();
+
+		fpsPaint = new Paint();
+		fpsPaint.setTextSize(20);
+		fpsPaint.setColor(0xffff0000);
 	}
 
 	/**
@@ -334,6 +346,9 @@ public class GifDrawable extends Drawable implements Animatable, MediaPlayerCont
 			mIsRunning = true;
 		}
 		final long lastFrameRemainder = mNativeInfoHandle.restoreRemainder();
+		startTime = System.currentTimeMillis();
+		prevTime = startTime;
+		frames = 0;
 		startAnimation(lastFrameRemainder);
 	}
 
@@ -772,6 +787,18 @@ public class GifDrawable extends Drawable implements Animatable, MediaPlayerCont
 			mPaint.setColorFilter(null);
 		}
 
+		++frames;
+		long nowTime = System.currentTimeMillis();
+		long deltaTime = nowTime - startTime;
+		if (deltaTime > 1000) {
+			float secs = (float) deltaTime / 1000f;
+			fps = (float) frames / secs;
+            fpsString = "fps: " + fps;
+			startTime = nowTime;
+			frames = 0;
+			Log.d("fps",fpsString);
+		}
+		canvas.drawText(fpsString,0,20,fpsPaint);
 	}
 
 	private void scheduleNextRender() {
